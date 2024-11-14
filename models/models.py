@@ -272,8 +272,8 @@ class Llama32v_Chat_HF:
         ).to(self.model.device)
 
         raw_output = self.model.generate(**inputs, max_new_tokens=1000)
-        output = self.processor.decode(raw_output[0])
-        return output
+        output = self.processor.decode(raw_output[0][inputs['input_ids'].shape[1]:])
+        return output.replace('<|eot_id|>', '')
 
 
 ### Language only models
