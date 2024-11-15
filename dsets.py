@@ -12,6 +12,7 @@ from constants import _DATA_ROOT
 import glob
 import requests
 import shutil
+import tarfile
 
 ###### A quick util for saving images to disc
 def reduce_size(image, target_size=-1):
@@ -280,17 +281,31 @@ class MMC(Dataset):
         self.data_root = os.path.join(_DATA_ROOT, 'mmc')
 
         metadata_df_path = os.path.join(self.data_root, 'mmc_benchmark_text.jsonl')
-        if not os.path.exists(metadata_df_path):
+        if not os.path.exists(metadata_df_path): # dataset is not yet downloaded
+            ### create directory for dataset
+            os.makedirs(self.data_root, exist_ok=True)
+            ### donwload metadata jsonl
             response = requests.get("https://huggingface.co/datasets/xywang1/MMC/resolve/main/MMC-Benchmark/mmc_benchmark_text.jsonl?download=true")
             with open(metadata_df_path, "wb") as file:
                 file.write(response.content)
+            ### create subdirectory for images and download all images
+            os.makedirs(os.path.join(self.data_root, 'images'), exist_ok=True)
+            response = requests.get("https://huggingface.co/datasets/xywang1/MMC/resolve/main/MMC-Benchmark/mmc_benchmark_images.tar.gz?download=true")
+            tar_gz_file_path = os.path.join(self.data_root, 'mmc_benchmark_images.tar.gz')
+            with open(tar_gz_file_path, "wb") as file:
+                file.write(response.content)
+            # extract images
+            with tarfile.open(tar_gz_file_path, "r:gz") as tar:
+                tar.extractall(path=self.data_root)
+            # remove tar_gz_file
+            os.remove(tar_gz_file_path)
 
         self.df = pd.read_json(metadata_df_path, lines=True)
 
     def __getitem__(self, ind):
         row = self.df.iloc[ind]
         question, answer = [row[x] for x in ['instruction', 'label']]
-        img_path = os.path.join(self.data_root,'images/',row['image_id'])
+        img_path = os.path.join(self.data_root,'mmc_benchmark_images/',row['image_id'])
         image = Image.open(img_path).convert('RGB')
         prompt = '\n'.join([question, 'A. True', 'B. False'])
         return dict({
@@ -491,5 +506,5 @@ _DSET_DICT = {
     'seedbench': SEEDBench,
     #### langauge datasets
     'mmlu_pro': MmluPro,
-    'math': MATH
+    # 'math': MATH
 }
