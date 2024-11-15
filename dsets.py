@@ -278,10 +278,14 @@ class MMC(Dataset):
     def __init__(self):
         self.dsetname = 'mmc'
         self.data_root = os.path.join(_DATA_ROOT, 'mmc')
-        self.df = pd.read_json(os.path.join(self.data_root, 'mmc_benchmark_text.jsonl'), lines=True)
-        # with open(os.path.join(self.data_root, 'data.json'), 'r') as f:
-        #     json_dict = json.load(f)
-        #     self.df = pd.DataFrame(json_dict)
+
+        metadata_df_path = os.path.join(self.data_root, 'mmc_benchmark_text.jsonl')
+        if not os.path.exists(metadata_df_path):
+            response = requests.get("https://huggingface.co/datasets/xywang1/MMC/resolve/main/MMC-Benchmark/mmc_benchmark_text.jsonl?download=true")
+            with open(metadata_df_path, "wb") as file:
+                file.write(response.content)
+
+        self.df = pd.read_json(metadata_df_path, lines=True)
 
     def __getitem__(self, ind):
         row = self.df.iloc[ind]
