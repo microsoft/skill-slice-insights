@@ -146,6 +146,15 @@ class MMVet(Dataset):
 class MMTBench(Dataset):
     def __init__(self):
         self.root = os.path.join(_DATA_ROOT, 'mmtbench')
+
+        metadata_df_path = os.path.join(self.root, 'MMT-Bench_VAL.tsv')
+        if not os.path.exists(metadata_df_path): 
+            os.makedirs(self.root, exist_ok=True)
+            os.makedirs(os.path.join(self.root, 'images'))
+            response = requests.get("https://huggingface.co/datasets/OpenGVLab/MMT-Bench/resolve/main/MMT-Bench_VAL.tsv?download=true")
+            with open(metadata_df_path, "wb") as file:
+                file.write(response.content)
+            
         self.df = pd.read_csv(f'{self.root}/MMT-Bench_VAL.tsv', sep='\t')
         self.dsetname = 'mmtbench'
 
@@ -153,7 +162,6 @@ class MMTBench(Dataset):
         row = self.df.iloc[ind]
         img_path = f"{self.root}/images/{row['l2-category']}__ind_{row['index']}.jpg"
         if not os.path.exists(img_path):
-            os.makedirs(self.images_root, exist_ok=True)
             img_bytes = row['image']
             image = decode_base64_to_image(img_bytes)
             image.save(img_path)
@@ -382,6 +390,7 @@ class MMVP(Dataset):
 
         questions_path = os.path.join(self.root, 'mmvp_questions.csv')
         if not os.path.exists(questions_path):
+            os.makedirs(self.root, exist_ok=True)
             response = requests.get("https://huggingface.co/datasets/MMVP/MMVP/resolve/main/Questions.csv?download=true")
             with open(questions_path, "wb") as file:
                 file.write(response.content)
