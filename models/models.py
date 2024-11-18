@@ -275,6 +275,14 @@ class Llama32v_Chat_HF:
         output = self.processor.decode(raw_output[0][inputs['input_ids'].shape[1]:])
         return output.replace('<|eot_id|>', '')
 
+class Llama32v_Chat_90B_Dummy:
+    def __init__(self):
+        ### This is just a dummy class for compatability with my other code -- Vibhav has it implemented on MSR side.
+        self.modelname = 'llama32v-chat-90b'
+        pass
+
+    def answer_question(self, question, system_message, image):
+        raise NotImplementedError
 
 ### Language only models
 class Orca2:
@@ -342,5 +350,6 @@ _MODELS_DICT = {
     'orca2-7b': Orca2_7b,
     'llama2chat-13b': Llama2Chat_13b,
     'llama2chat-7b': Llama2Chat_7b,
-    'llama32v-chat-11b': Llama32v_Chat_HF
+    'llama32v-chat-11b': Llama32v_Chat_HF,
+    'llama32v-chat-90b': Llama32v_Chat_90B_Dummy
 }

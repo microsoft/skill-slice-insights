@@ -86,7 +86,7 @@ def get_all_preds():
     for modelname in modelnames:
         curr_dfs = []
         for dsetname in dsetnames:
-            curr_dfs.append(add_q_id_col(manually_score_df(dsetname, modelname), dsetname))
+            curr_dfs.append(add_q_id_col(score_df_manually(dsetname, modelname), dsetname))
             curr_dfs[-1]['dsetname'] = dsetname
 
         df = pd.concat(curr_dfs)
@@ -122,6 +122,7 @@ def strengths_and_weaknesses(modelnames = ['gpt-4o', 'gemini-1.5-pro', 'claude-s
     cluster_info = get_cluster_info()
     df = get_all_preds()
 
+    an = SkillAnnotator()
     accs ={m: an.acc_by_skill(None, df[df.model == m][['correct']], cluster_info=cluster_info, min_qs_in_cluster=100)[0] for m in modelnames}
     df2 = pd.DataFrame({m:{k:tup[0]*100 for k,tup in v.items()} for m, v in accs.items()})
     df2 = df2.dropna()
@@ -136,16 +137,23 @@ def strengths_and_weaknesses(modelnames = ['gpt-4o', 'gemini-1.5-pro', 'claude-s
     wrapper = textwrap.TextWrapper(width=30)
     wrap = lambda x: '\n'.join(wrapper.wrap(x))
 
+    def get_pval(skill, m1, m2):
+        skill_df = df.loc[qs_by_cluster[skill]]
+        diffs = list((skill_df[skill_df.model == m1].correct-skill_df[skill_df.model == m2].correct).dropna())
+        return wilcoxon(diffs)[1]
+
     cp = sns.color_palette()
     for mode, sign in zip(['weaknesses', 'strengths'], ['-', '+']):
         f, axs = plt.subplots(1,3, figsize=(10.5,5))
         for ax, modelname in zip(axs, modelnames):
             sub_df = df2[df2.winner == modelname]
             sub_df = sub_df.sort_values(f'gains__{modelname}').reset_index().rename(columns={'index':'skill'})
+            sub_df = sub_df[:10] if mode == 'weaknesses' else sub_df[-10:]
+            sub_df['significance'] = '*' * sum([get_pval(skill, modelname, m) < pval_thresh for m in modelnames if m != modelname])
 
             sub_df.skill = sub_df.apply(lambda row: row.skill + " ({}{:.1f}\%)".format(sign, np.abs(row[f'gains__{modelname}'])), axis=1)
             ax.set_title(f"{mode.title()} of\n{_PRETTY_NAMES[modelname]}")
-            to_plot = sub_df[:10] if mode == 'weaknesses' else sub_df[-10:]
+            # to_plot = sub_df[:10] if mode == 'weaknesses' else sub_df[-10:]
             to_plot = pd.melt(to_plot[['skill']+modelnames], id_vars=['skill'], var_name='Model', value_name='Accuracy')
             to_plot['skill'] =  to_plot.skill.apply(wrap)
             sns.pointplot(data=to_plot, y='skill', x='Accuracy', hue='Model', hue_order=modelnames, legend=False, 
