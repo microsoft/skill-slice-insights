@@ -1,6 +1,7 @@
 from validation import verify_skill_relevance, compute_conf_mats
 import pandas as pd
 from constants import _CACHE_ROOT
+from dsets import _DSET_DICT
 
 try:
     pos_and_neg_skills = pd.read_csv('pos_neg_skills_mmlu_pro_llama32v90b.csv')
@@ -29,6 +30,8 @@ for f in fs:
         print("If you want to place it in another directory, change the path in line 6 accordingly.")
 
     dsetname = f.split('/')[-1].split('.csv')[0]
+    if dsetname not in _DSET_DICT:
+        continue
     _ = verify_skill_relevance(
         verifier_model_name='gpt-4o', pos_and_neg_skills=pos_and_neg_skills,
         dsetname=dsetname, annotator_model_name='direct_prompting_gpt-4o'
