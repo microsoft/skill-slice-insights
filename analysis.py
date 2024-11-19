@@ -140,28 +140,37 @@ def strengths_and_weaknesses(modelnames = ['gpt-4o', 'gemini-1.5-pro', 'claude-s
     def get_pval(skill, m1, m2):
         skill_df = df.loc[qs_by_cluster[skill]]
         diffs = list((skill_df[skill_df.model == m1].correct-skill_df[skill_df.model == m2].correct).dropna())
-        return wilcoxon(diffs)[1]
+        pval = wilcoxon(diffs)[1]
+        return pval
+
+    def mark_significance(skill, curr_m, pval_thresh=0.01):
+        num_daggers = sum([get_pval(skill, curr_m, other_m) < pval_thresh for other_m in modelnames if other_m != curr_m])
+        if num_daggers > 0:
+            return '$' + '\dagger' * num_daggers + '$'
+        else:
+            return ''
 
     cp = sns.color_palette()
     for mode, sign in zip(['weaknesses', 'strengths'], ['-', '+']):
-        f, axs = plt.subplots(1,3, figsize=(10.5,5))
+        f, axs = plt.subplots(1,3, figsize=(11,5.5))
         for ax, modelname in zip(axs, modelnames):
             sub_df = df2[df2.winner == modelname]
             sub_df = sub_df.sort_values(f'gains__{modelname}').reset_index().rename(columns={'index':'skill'})
             sub_df = sub_df[:10] if mode == 'weaknesses' else sub_df[-10:]
-            sub_df['significance'] = '*' * sum([get_pval(skill, modelname, m) < pval_thresh for m in modelnames if m != modelname])
+            sub_df['significance'] = sub_df.skill.apply(lambda skill: mark_significance(skill, modelname))
 
-            sub_df.skill = sub_df.apply(lambda row: row.skill + " ({}{:.1f}\%)".format(sign, np.abs(row[f'gains__{modelname}'])), axis=1)
+            # sub_df.skill = sub_df.apply(lambda row: "{} {} ({}{:.1f}\%)".format(row.significance, row.skill, sign, np.abs(row[f'gains__{modelname}'])), axis=1)
+            sub_df.skill = sub_df.apply(lambda row: "{} ({}{:.1f}\%){}".format(row.skill, sign, np.abs(row[f'gains__{modelname}']), row.significance), axis=1)
             ax.set_title(f"{mode.title()} of\n{_PRETTY_NAMES[modelname]}")
             # to_plot = sub_df[:10] if mode == 'weaknesses' else sub_df[-10:]
-            to_plot = pd.melt(to_plot[['skill']+modelnames], id_vars=['skill'], var_name='Model', value_name='Accuracy')
-            to_plot['skill'] =  to_plot.skill.apply(wrap)
+            to_plot = pd.melt(sub_df[['skill']+modelnames], id_vars=['skill'], var_name='Model', value_name='Accuracy')
+            to_plot['skill'] = to_plot.skill.apply(wrap)
             sns.pointplot(data=to_plot, y='skill', x='Accuracy', hue='Model', hue_order=modelnames, legend=False, 
                         linewidth=0, markersize=5.5, ax=ax, order=to_plot.groupby('skill').mean('Accuracy').sort_values('Accuracy').index)
             
             ax.set_yticklabels(ax.get_yticklabels(), fontsize=11)
 
-        f.tight_layout(); f.savefig(os.path.join(_PLOTS_ROOT, f'model_comp/{mode}.jpg'), dpi=300, bbox_inches='tight')
+        f.tight_layout(); f.savefig(os.path.join(_PLOTS_ROOT, f'model_comp3/{mode}.jpg'), dpi=300, bbox_inches='tight')
     # let's save a legend too
     from matplotlib.lines import Line2D
     f, ax = plt.subplots(1,1, figsize=(8,1))

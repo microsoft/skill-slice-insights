@@ -31,7 +31,7 @@ for f in fs:
     dsetname = f.split('/')[-1].split('.csv')[0]
     _ = verify_skill_relevance(
         verifier_model_name='gpt-4o', pos_and_neg_skills=pos_and_neg_skills,
-        dsetname='mmlu_pro', annotator_model_name='direct_prompting_gpt-4o'
+        dsetname=dsetname, annotator_model_name='direct_prompting_gpt-4o'
     )
     out_df = pd.read_csv(os.path.join(_CACHE_ROOT, 'verification', 'results', 'gpt-4o_verifier', 'direct_prompting_gpt-4o_annotator', dsetname+'.csv'))
     cm = compute_conf_mats(out_df)
