@@ -40,3 +40,13 @@ for f in fs:
     cm = compute_conf_mats(out_df)
     print(f"Dataset: {dsetname}, Confusion matrix:")
     print(cm)
+
+    print("USING CLAUDE AS VERIFIER")
+    _ = verify_skill_relevance(
+        verifier_model_name='claude-sonnet', pos_and_neg_skills=pos_and_neg_skills,
+        dsetname=dsetname, annotator_model_name='direct_prompting_gpt-4o'
+    )
+    out_df = pd.read_csv(os.path.join(_CACHE_ROOT, 'verification', 'results', 'gpt-4o_verifier', 'direct_prompting_gpt-4o_annotator', dsetname+'.csv'))
+    cm = compute_conf_mats(out_df)
+    print(f"Dataset: {dsetname}, Confusion matrix:")
+    print(cm)
