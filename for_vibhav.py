@@ -12,10 +12,10 @@ for dsetname in ['mme', 'mmvet']:
         print("MAKE SURE TO DOWNLOAD THE FILES MAZDA EMAILED, AND PLACE IT IN THIS DIRECTORY. If you want to place it in another directory, change the path in line 6 accordingly.")
     _ = verify_skill_relevance(
         verifier_model_name='claude-sonnet', pos_and_neg_skills=pos_and_neg_skills,
-        dsetname='mmlu_pro', annotator_model_name='gpt-4o'
+        dsetname=dsetname, annotator_model_name='gpt-4o'
     )
 
-    df = pd.read_csv(os.path.join(_CACHE_ROOT, 'verification', 'results', 'claude-sonnet_verifier', 'gpt-4o_annotator', 'mmlu_pro.csv'))
+    df = pd.read_csv(os.path.join(_CACHE_ROOT, 'verification', 'results', 'claude-sonnet_verifier', 'gpt-4o_annotator', dsetname))
     cm = compute_conf_mats(df)
     print(f"Confusion matrix for GPT-4o inferred skills on {dsetname} (higher vals on diagonal = better):\n", cm)
 
