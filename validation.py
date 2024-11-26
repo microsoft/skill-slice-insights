@@ -406,18 +406,20 @@ def plot_consistency_verifier_and_annotator(ann_match_thresh=0.875):
 ### Human validation
 #####################################################################
 def save_question_as_img(image, prompt, fname):
-    f, ax = plt.subplots(1,1, figsize=(6,9))
-    ax.set_axis_off()
-    img = image.resize((400,400))
-    ax.imshow(img)
-
+    f, ax = plt.subplots(1,1, figsize=(4,6))
     prompt = prompt.replace('&', '\&')
-    wrapper = textwrap.TextWrapper(width=60)
+    wrapper = textwrap.TextWrapper(width=80)
     text = ''
     for t in prompt.split('\n'):
         text += '\n'.join(wrapper.wrap(t)) +'\n'
+    if image:
+        ax.set_axis_off()
+        img = image.resize((200,200))
+        ax.imshow(img)
+        ax.text(0, 210, text, va='top', ha='left', fontsize=12)
+    else:
+        ax.text(0, 0, text, va='top', ha='left', fontsize=12)
 
-    ax.text(0, 410, text, va='top', ha='left', fontsize=16)
     f.tight_layout(); f.savefig(fname, dpi=300, bbox_inches='tight')
 
 def setup_human_eval(num_per_dset=10):
