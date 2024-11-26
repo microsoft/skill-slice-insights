@@ -15,7 +15,7 @@ for dsetname in ['mme', 'mmvet']:
         dsetname=dsetname, annotator_model_name='gpt-4o'
     )
 
-    df = pd.read_csv(os.path.join(_CACHE_ROOT, 'verification', 'results', 'claude-sonnet_verifier', 'gpt-4o_annotator', dsetname))
+    df = pd.read_csv(os.path.join(_CACHE_ROOT, 'verification', 'results', 'claude-sonnet_verifier', 'gpt-4o_annotator', dsetname+'.csv'))
     cm = compute_conf_mats(df)
     print(f"Confusion matrix for GPT-4o inferred skills on {dsetname} (higher vals on diagonal = better):\n", cm)
 
