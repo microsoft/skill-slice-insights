@@ -6,8 +6,9 @@ _PLOTS_ROOT = '/cmlscratch/mmoayeri/mazda_msr_intership/cached/plots/'
 _DATA_ROOT = '/fs/nexus-projects/skill-slicing/data/'
 _PRETTY_NAMES = {'gpt-4o': 'GPT-4o', 'gemini-1.5-pro': 'Gemini 1.5 Pro', 'claude-sonnet': 'Claude 3.5 Sonnet', 
                  'gpt-4v': 'GPT-4v', 'gemini-1.0-pro': 'Gemini 1.0 Pro', 'claude-opus': 'Claude 3.0 Opus'}
-
-
+_DSET_PRETTY_NAMES = {'mmbench': 'MMBench', 'mmtbench': 'MMTBench','mmlu_pro': 'MMLU Pro', 'seedbench': 'SEEDBench',
+                      'mmmu': 'MMMU', 'realworld_qa': 'RealWorld QA', 'mmvp': 'MMVP', 'mme': 'MME', 'mmc': 'MMC',
+                      'mmvet': 'MMVet', 'mathvista': 'MathVista', 'reka_vibe': 'VibeEval'}
 ###################################################################################
 ### PROMPTS: for inference
 ###################################################################################

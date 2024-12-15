@@ -28,10 +28,10 @@ plt.rcParams.update({
 #####################################################################
 ### Score individual instances
 #####################################################################
-def score_df_w_llm_judge(dsetname, modelname, grader_model, prompt_key='standard_prompt', format_as_series=True):
+def score_df_w_llm_judge(dsetname, modelname, grader_model='gpt-4o', prompt_key='standard_prompt', format_as_series=True):
     path = os.path.join(_CACHE_ROOT, 'model_outputs', prompt_key, modelname, dsetname+'.csv')
     df = pd.read_csv(path)
-    if 'correct' not in df.columns or modelname == 'gemini-1.5-pro' and dsetname == 'mathvista':
+    if 'correct' not in df.columns:
         print(f"Grading {modelname} outputs for {dsetname} using {grader_model.modelname} as the grader model.")
         grades = []
         dset = _DSET_DICT[dsetname]()
@@ -55,7 +55,8 @@ def default_parse_ans(ans):
         ans = ans.split('ANSWER:')[1]
     return ans.strip()[:1]    
 
-def score_df_manually(dsetname, modelname, prompt_key='standard_prompt', format_as_series=True, subsample=False):
+def score_df(dsetname, modelname, prompt_key='standard_prompt', format_as_series=True, subsample=False):
+    ### Ideally we use manual parsing, but it needs to implemented here. Otherwise we use an LLM as judge (see score_df_w_llm_judge)
     fname = 'SUBSAMPLE2__'+dsetname if subsample else dsetname
     path = os.path.join(_CACHE_ROOT, 'model_outputs', prompt_key, modelname, fname+'.csv')
     df = pd.read_csv(path)
@@ -75,6 +76,8 @@ def score_df_manually(dsetname, modelname, prompt_key='standard_prompt', format_
     elif dsetname == 'realworld_qa':
         df['parsed_response'] = df.response.apply(lambda x: x.split('\n')[0] if '\n' in x else x)
         df['correct'] = df.apply(lambda x: x['answer'].lower() in x['parsed_response'].lower(), axis=1)
+    else: ### use LLM Judge
+        df = score_df_w_llm_judge(dsetname, modelname)
     
     output = add_q_id_col(df, dsetname) if format_as_series else df
     return df
@@ -86,7 +89,7 @@ def get_all_preds():
     for modelname in modelnames:
         curr_dfs = []
         for dsetname in dsetnames:
-            curr_dfs.append(add_q_id_col(score_df_manually(dsetname, modelname), dsetname))
+            curr_dfs.append(add_q_id_col(score_df(dsetname, modelname), dsetname))
             curr_dfs[-1]['dsetname'] = dsetname
 
         df = pd.concat(curr_dfs)
@@ -189,7 +192,7 @@ def model_evolution():
     for model_pair, ax in zip([('gpt-4v', 'gpt-4o'), ('gemini-1.0-pro', 'gemini-1.5-pro'), ('claude-opus', 'claude-sonnet')], axs):
         dfs = []
         for modelname in model_pair:
-            df = add_q_id_col(manually_score_df('mmlu_pro', modelname), 'mmlu_pro')
+            df = add_q_id_col(score_df('mmlu_pro', modelname), 'mmlu_pro')
             df['model'] = modelname
             dfs.append(df)
 
@@ -402,7 +405,7 @@ def routing_table():
 #### Probing questions analysis
 #####################################################################
 
-def gen_probe_qs2():
+def gen_probe_qs(mode='multimodal'):
     ### Takes roughly 1 min to gen 20 (i.e. max_to_gen arg) sets of probe qs for one skill
     modelnames = ['gpt-4o', 'claude-sonnet', 'gemini-1.5-pro']
     if mode == 'multimodal':
@@ -412,7 +415,7 @@ def gen_probe_qs2():
     for modelname in modelnames:
         curr_dfs = []
         for dsetname in dsetnames:
-            curr_dfs.append(add_q_id_col(manually_score_df(dsetname, modelname), dsetname))
+            curr_dfs.append(add_q_id_col(score_df(dsetname, modelname), dsetname))
             curr_dfs[-1]['dsetname'] = dsetname
 
         df = pd.concat(curr_dfs)
@@ -433,7 +436,7 @@ def gen_probe_qs2():
         'highest accuracy':list(df2[-20:].index),
     }
 
-    with open('../cached/logs/probed_skills_multimodal.json', 'w') as f:
+    with open(_CACHE_ROOT + 'retrieval/probed_skills_multimodal.json', 'w') as f:
         json.dump(skills_by_level, f)
 
     for skills in skills_by_level.values():
@@ -441,7 +444,7 @@ def gen_probe_qs2():
             annotator.gen_probe_qs_for_skill(skill, qs_by_cluster, skills_by_cluster, skills_df, max_to_gen=20)    
 
 def answer_probe_qs_over_skill_levels(modelname_to_probe):
-    with open(_CACHE_ROOT + 'logs/probed_skills_multimodal.json', 'r') as f:
+    with open(_CACHE_ROOT + 'retrieval/probed_skills_multimodal.json', 'r') as f:
         skills_by_level = json.load(f)
 
     annotator = SkillAnnotator()
@@ -465,7 +468,7 @@ def parse_consistency_response(x):
         return False
 
 def plot_consistency_by_skill_level():
-    with open(_CACHE_ROOT+'logs/probed_skills_multimodal.json', 'r') as f:
+    with open(_CACHE_ROOT+'retrieval/probed_skills_multimodal.json', 'r') as f:
         skills_by_level = json.load(f)
     modelnames = ['gpt-4o', 'gemini-1.5-pro', 'claude-sonnet']
 
@@ -504,7 +507,7 @@ def plot_consistency_by_skill_level():
     f.tight_layout(); f.savefig('test.jpg',dpi=300, bbox_inches='tight')
 
 def plot_inconsistency_slice_acc_scatter():
-    with open(_CACHE_ROOT+'logs/probed_skills_multimodal.json', 'r') as f:
+    with open(_CACHE_ROOT+'retrieval/probed_skills_multimodal.json', 'r') as f:
         skills_by_level = json.load(f)
     modelnames = ['gpt-4o', 'gemini-1.5-pro', 'claude-sonnet']
 
@@ -676,17 +679,13 @@ def prompt_ablation():
 
 
 if __name__ == '__main__':
-    # gen_probe_qs_over_skill_levels()
-    # answer_probe_qs_over_skill_levels()
-
+    ### Grading model outputs -- some require LLM judge. See score_df function
     grader_model = _MODELS_DICT['gpt-4o']()
     for dsetname in ['mathvista', 'mmvet', 'reka_vibe']:
         for modelname in ['gpt-4o', 'claude-sonnet', 'gemini-1.5-pro', 'gpt-4o', 'claude-opus']:
             _ = score_df(dsetname, modelname, grader_model)
-
-    # To do my in context experiments, I need to implement functionality to take in multiple images for each of my models
-    # infer_w_in_context_egs(modelname='phi3')
-    # infer_w_in_context_egs(modelname='phi3', mode='random')
+    
+    # gen_probe_qs_over_skill_levels()
 
     # import submitit
     # log_folder = '../logs/%j'

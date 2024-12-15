@@ -65,9 +65,7 @@ class Claude:
     def __init__(self):
         self.config = {
             "secret_key_params": CLAUDE_SECRET_KEY_PARAMS,
-            # "model_name": config_model_name
         }
-        # self.model = ClaudeModels(self.config)
 
     def answer_question(self, question, system_message, image):
         ### system_message handling seems to be buggy on the lfm side...

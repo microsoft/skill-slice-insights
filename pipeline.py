@@ -405,6 +405,24 @@ class SkillAnnotator:
         print(f'Saving answers from model {modelname_to_probe} to probing questions about {skill} skill to {out_fname}')
         probes_df.to_csv(out_fname, index=False)
 
+    #####################################################################
+    ### Skill-based retrieval
+    #####################################################################
+    def retrieve_by_query_skill(self, query_skill, num_to_return=100, avg_over_topk_tags=3):        
+        skills_df, skills_list, skills_vecs = self.build_skillset()
+        df = skills_df.groupby('id').apply(lambda sub_df: list(set(sub_df.skill)), include_groups=False)
+        df = df.reset_index().rename(columns={0: 'skills_for_q'})
+        
+        query_vec = self.embed_strs([query_skill])[0]
+        sims = skills_vecs @ query_vec
+        skill_to_ind = {skill:ind for ind,skill in enumerate(skills_list)}
+        df['query_sim'] = df['skills_for_q'].apply(
+            lambda x: torch.topk(sims[[skill_to_ind[tag] for tag in x]], k=min(avg_over_topk_tags, len(x))).values.mean().item() 
+            if len(x) > 0 else 0
+        )
+        
+        return list(df['id'][list(df.query_sim.nlargest(num_to_return).index)])
+
 if __name__ == '__main__':
     ### Example usage
     # annotator = SkillAnnotator()

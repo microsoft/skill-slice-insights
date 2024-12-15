@@ -174,13 +174,25 @@ def plot_single_conf_mat(verifiers =['gpt-4v', 'claude-sonnet', 'gemini-1.5-pro'
     f.tight_layout(); f.savefig(os.path.join(_PLOTS_ROOT, 'skill_verification_confmats_all.jpg'), dpi=300, bbox_inches='tight')
 
 def cc_vs_not():
-    dsetnames = ['mmbench', 'mmtbench', 'mmlu_pro', 'seedbench', 'mmmu', 'realworld_qa', 'mmvp', 'mme', 'mmc']
+    dsetnames = ['mmbench', 'mmtbench', 'mmlu_pro', 'seedbench', 'mmmu', 'realworld_qa', 'mmvp', 'mme', 'mmc', 'mmvet', 'mathvista', 'reka_vibe']
 
     results = []
-    for dsetname in dsetnames:
+    for dsetname in tqdm(dsetnames):
+        print(dsetname)
         df = pd.read_csv(os.path.join(_CACHE_ROOT, 'verification', 'results', 'claude-sonnet_verifier', 'gpt-4o_annotator', dsetname +'.csv'))
-        correct_per_q = add_q_id_col(manually_score_df(dsetname, 'gpt-4o'), dsetname)
-        df['correct'] = df.question_ind.apply(lambda x: correct_per_q.loc[f'{dsetname}__{x}'] if f'{dsetname}__{x}' in correct_per_q.index else np.nan)
+        correct_per_q = add_q_id_col(score_df_manually(dsetname, 'gpt-4o'), dsetname)
+        # df['correct'] = df.question_ind.apply(lambda x: correct_per_q.loc[f'{dsetname}__{x}'] if f'{dsetname}__{x}' in correct_per_q.index else np.nan)
+        correct = []
+        for q in df.question_ind:  # I hate this but here we are
+            key = f'{dsetname}__{q}'
+            try:
+                correct.append(correct_per_q.loc[key].correct)
+            except:
+                correct.append(np.nan)
+        df['correct'] = correct
+        df = df.dropna()
+        # df['correct'] = df.question_ind.apply(lambda x: correct_per_q.get(f'{dsetname}__{x}', np.nan) if f'{dsetname}__{x}' in correct_per_q.index else np.nan)
+        # df['correct'] = df.question_ind.apply(lookup_correct)
 
         ccs, preds, gts = [], [], []
         for i, row in df.iterrows():
@@ -194,26 +206,29 @@ def cc_vs_not():
         # overall accs
         acc_mc, acc_cc = list(df2.groupby('ccs').mean()['verifier_cc'])
 
-        results.append([dsetname, modelname, acc_mc, acc_cc])
+        results.append([dsetname, acc_mc, acc_cc])
     
-    df = pd.DataFrame(results, columns=['dataset', 'modelname', 'acc_mc', 'acc_cc'])
-    ### Plotting code seems to be missing.... I have added the below, but it may be slightly off.
+    df = pd.DataFrame(results, columns=['dataset', 'acc_mc', 'acc_cc'])
     df['avg'] = 0.5 * (df.acc_mc + df.acc_cc)
     df = df.sort_values('avg')
     f, ax = plt.subplots(1,1, figsize=(4,3))
     yticklabels, xs, cc_to_plot, mc_to_plot = [], [], [], []
+    ctr = 0
     for i, row in df.iterrows():
-        yticklabels.append(row['dataset'])
+        yticklabels.append(_DSET_PRETTY_NAMES[row['dataset']])
         acc_mc, acc_cc = [row[f"acc_{x}"] for x in ['mc', 'cc']]
-        ax.plot([i, i], [acc_mc, acc_cc], color='deepskyblue' if acc_cc > acc_mc else 'coral')
-        xs.append(i)
+        ax.plot([acc_mc, acc_cc], [ctr, ctr], ls ='-', color='deepskyblue' if acc_cc > acc_mc else 'coral')
+        xs.append(ctr)
         cc_to_plot.append(acc_cc)
         mc_to_plot.append(acc_mc)
-    ax.scatter(xs, cc_to_plot, marker='o', color='deepskyblue', label='Correctly Answered')
-    ax.scatter(xs, mc_to_plot, marker='^', color='coral', label='Incorrectly Answered')
+        ctr += 1
+    ax.scatter(cc_to_plot, xs, marker='o', color='deepskyblue', label='Correctly\nAnswered')
+    ax.scatter(mc_to_plot, xs, marker='^', color='coral', label='Incorrectly\nAnswered')
+    ax.set_yticks(range(len(yticklabels)))
     ax.set_yticklabels(yticklabels)
     ax.set_xlabel('Skill Relevance')
-    ax.set_xlims([0.8, 1])
+    ax.set_xlim([0.8, 1])
+    ax.set_ylim([-1,12])
     ax.legend()
     f.tight_layout(); f.savefig(os.path.join(_PLOTS_ROOT, 'cc_vs_mc.jpg'), dpi=300, bbox_inches='tight')
 

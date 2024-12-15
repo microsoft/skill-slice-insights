@@ -406,6 +406,9 @@ class MMVP(Dataset):
         self.images_df = self.images_df.set_index('image_id')
 
     def __getitem__(self, ind):
+        if ind >= len(self):
+            raise IndexError(f"Index {ind} out of range for dataset of length {len(self)}")
+
         row = self.questions_df.loc[ind+1]
         image = self.images_df.loc[ind+1]['image']
         question, answer, options = [row[x] for x in ['Question', 'Correct Answer', 'Options']]
