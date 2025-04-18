@@ -13,6 +13,6 @@ scipy==1.14.1
 seaborn==0.13.2
 sentence_transformers==3.0.1
 submitit==1.5.2
-torch==2.4.1
+torch==2.6.0
 tqdm==4.66.4
 transformers==4.47.0.dev0
