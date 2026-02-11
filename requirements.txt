@@ -5,7 +5,7 @@ matplotlib==3.9.2
 numpy==1.23.5
 openai==1.54.4
 pandas==2.2.3
-Pillow==11.0.0
+Pillow==12.1.1
 protobuf==5.28.3
 qwen_vl_utils==0.0.8
 Requests==2.32.3
